@@ -25,6 +25,7 @@
 
 from typing import Any
 
+import pandas as pd
 from dash import html
 from dash_svg import G, Path, Rect, Svg, Text
 
@@ -36,6 +37,61 @@ from utils.utils import format_scientific_notation_if_needed
 DEFAULT_MAX_LENGTH = 6
 DEFAULT_PRECISION = 1
 DEFAULT_SCIENTIFIC_WIDTH = 8
+
+
+def get_memchart_data(
+    mem_data: list[dict[str, Any]], base_data: schema.Workload
+) -> dict[str, str]:
+    """
+    Extract memory chart metrics from workload for Panel (no Dash/dash_svg).
+    Returns dict of metric name -> formatted display value.
+    """
+    if len(mem_data) != 1:
+        console_error("Memory Chart config doesn't follow expected formatting")
+        return {}
+    table_config = mem_data[0]["metric_table"]
+    original_df = base_data.dfs.get(table_config["id"])
+    if original_df is None or original_df.empty:
+        return {}
+    display_df = original_df[["Metric", "Value"]].copy()
+    alias = display_df["Metric"].values
+    values = display_df["Value"].values
+    memchart_values: dict[str, Any] = {}
+    for i in range(len(alias)):
+        memchart_values[alias[i]] = values[i]
+    return {
+        k: format_value_for_display(v)
+        for k, v in memchart_values.items()
+    }
+
+
+def get_memchart_panel(
+    mem_data: list[dict[str, Any]], base_data: schema.Workload
+):
+    """
+    Return a Panel pane showing memory chart data (table form).
+    Use this for the Panel/HoloViews GUI instead of get_memchart().
+    """
+    import panel as pn  # noqa: PLC0415
+    data = get_memchart_data(mem_data, base_data)
+    if not data:
+        return pn.pane.Markdown("No memory chart data.", styles={"color": "#888"})
+    df = pd.DataFrame(
+        list(data.items()),
+        columns=["Metric", "Value"],
+    )
+    tbl = pn.widgets.Tabulator(
+        df,
+        theme="midnight",
+        layout="fit_data",
+        sizing_mode="stretch_width",
+        show_index=False,
+    )
+    return pn.Column(
+        pn.pane.Markdown("## Memory Chart", styles={"color": "white"}),
+        tbl,
+        sizing_mode="stretch_width",
+    )
 
 
 def insert_chart_data(mem_data: list[dict[str, Any]], base_data: schema.Workload) -> G:

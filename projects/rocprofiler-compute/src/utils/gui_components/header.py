@@ -2,39 +2,18 @@
 # MIT License
 #
 # Copyright (c) 2021 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 ##############################################################################
 
-from typing import Any, Union
+from typing import Any
 
-import dash_bootstrap_components as dbc
 import pandas as pd
-from dash import dcc, html
+import panel as pn
 
 from utils import schema
 
 AVAIL_NORMALIZATIONS = ["per_wave", "per_cycle", "per_second", "per_kernel"]
 
 
-# List all the unique column values for desired column in df, 'target_col'
 def list_unique(orig_list: list[str], is_numeric: bool) -> list[str]:
     list_set = set(orig_list)
     unique_list = list(list_set)
@@ -43,301 +22,115 @@ def list_unique(orig_list: list[str], is_numeric: bool) -> list[str]:
     return unique_list
 
 
-def create_span(input_value: str) -> dict[str, Union[html.Span, str]]:
-    return {
-        "label": html.Span(str(input_value), title=str(input_value)),
-        "value": str(input_value),
-    }
-
-
 def get_header(
     raw_pmc: pd.DataFrame, input_filters: dict[str, Any], kernel_names: list[str]
-) -> html.Header:
+) -> tuple[pn.Column, dict[str, Any]]:
+    """
+    Build Panel header with nav menu and filter widgets.
+    Returns (layout_column, widget_dict) so the app can bind to widget values.
+    widget_dict keys: norm_filt, gcd_filt, disp_filt, top_n_filt, kernel_filt
+    """
     pmc_data = raw_pmc[schema.PMC_PERF_FILE_PREFIX]
     kernel_names = [str(name).strip() for name in pmc_data["Kernel_Name"]]
-
-    # Extract GPU and Dispatch IDs
     gpu_ids = [str(gpu_id) for gpu_id in pmc_data["GPU_ID"]]
     dispatch_ids = [str(dispatch_id) for dispatch_id in pmc_data["Dispatch_ID"]]
 
-    return html.Header(
-        id="home",
-        children=[
-            html.Nav(
-                id="nav-wrap",
-                children=[
-                    html.Ul(
-                        id="nav",
-                        children=[
-                            html.Div(
-                                className="nav-left",
-                                children=[
-                                    dbc.DropdownMenu(
-                                        [
-                                            dbc.DropdownMenuItem(
-                                                "Overview", header=True
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Roofline",
-                                                href="#roofline",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Top Stats",
-                                                href="#top_stats",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "System Info",
-                                                href="#system_info",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "System Speed-of-Light",
-                                                href="#system_speed-of-light",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Compute", header=True
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Command Processor (CPF/CPC)",
-                                                href="#command_processor_cpccpf",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Workgroup Manager (SPI)",
-                                                href="#workgroup_manager_spi",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Wavefront",
-                                                href="#wavefront",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Compute Units - Instruction Mix",
-                                                href="#compute_units_-_instruction_mix",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Compute Units - Compute Pipeline",
-                                                href="#compute_units_-_compute_pipeline",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem("Cache", header=True),
-                                            dbc.DropdownMenuItem(
-                                                "Local Data Share (LDS)",
-                                                href="#local_data_share_lds",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Instruction Cache",
-                                                href="#instruction_cache",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Scalar L1 Data Cache",
-                                                href="#scalar_l1_data_cache",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                (
-                                                    "Address Processing Unit and "
-                                                    "Data Return Path (TA/TD)"
-                                                ),
-                                                href=(
-                                                    "#address_processing_unit_and"
-                                                    "_data_return_path_tatd"
-                                                ),
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "Vector L1 Data Cache",
-                                                href="#vector_l1_data_cache",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "L2 Cache",
-                                                href="#l2_cache",
-                                                external_link=True,
-                                            ),
-                                            dbc.DropdownMenuItem(
-                                                "L2 Cache (per channel)",
-                                                href="#l2_cache_per_channel",
-                                                external_link=True,
-                                            ),
-                                        ],
-                                        label="Menu",
-                                        menu_variant="dark",
-                                    ),
-                                ],
-                            ),
-                            html.Li(
-                                className="filter",
-                                children=[
-                                    html.Div(
-                                        children=[
-                                            html.A(
-                                                className="smoothscroll",
-                                                children=["Normalization:"],
-                                            ),
-                                            dcc.Dropdown(
-                                                AVAIL_NORMALIZATIONS,
-                                                id="norm-filt",
-                                                value=input_filters["normalization"],
-                                                clearable=False,
-                                                style={"width": "150px"},
-                                            ),
-                                        ]
-                                    )
-                                ],
-                            ),
-                            html.Li(
-                                className="filter",
-                                children=[
-                                    html.Div(
-                                        children=[
-                                            html.A(
-                                                className="smoothscroll",
-                                                children=["GCD:"],
-                                            ),
-                                            dcc.Dropdown(
-                                                list_unique(
-                                                    gpu_ids,
-                                                    True,
-                                                ),  # list avail gcd ids
-                                                id="gcd-filt",
-                                                multi=True,
-                                                # default to any gpu filters
-                                                # passed as args
-                                                value=input_filters["gpu"],
-                                                placeholder="ALL",
-                                                clearable=False,
-                                                style={"width": "60px"},
-                                            ),
-                                        ]
-                                    )
-                                ],
-                            ),
-                            html.Li(
-                                className="filter",
-                                children=[
-                                    html.Div(
-                                        children=[
-                                            html.A(
-                                                className="smoothscroll",
-                                                children=["Dispatch Filter:"],
-                                            ),
-                                            dcc.Dropdown(
-                                                dispatch_ids,
-                                                id="disp-filt",
-                                                multi=True,
-                                                # default to any dispatch
-                                                # filters passed as args
-                                                value=input_filters["dispatch"],
-                                                placeholder="ALL",
-                                                style={"width": "150px"},
-                                            ),
-                                        ]
-                                    )
-                                ],
-                            ),
-                            html.Li(
-                                className="filter",
-                                children=[
-                                    html.Div(
-                                        children=[
-                                            html.A(
-                                                className="smoothscroll",
-                                                children=["Top N:"],
-                                            ),
-                                            dcc.Dropdown(
-                                                [1, 5, 10, 15, 20, 50, 100],
-                                                id="top-n-filt",
-                                                value=input_filters[
-                                                    "top_n"
-                                                ],  # default to any dispatch filters
-                                                # passed as args
-                                                clearable=False,
-                                                style={"width": "50px"},
-                                            ),
-                                        ]
-                                    )
-                                ],
-                            ),
-                            html.Li(
-                                className="filter",
-                                children=[
-                                    html.Div(
-                                        children=[
-                                            html.A(
-                                                className="smoothscroll",
-                                                children=["Kernels:"],
-                                            ),
-                                            dcc.Dropdown(
-                                                [
-                                                    create_span(name)
-                                                    for name in list_unique(
-                                                        kernel_names, False
-                                                    )
-                                                ],
-                                                id="kernel-filt",
-                                                multi=True,
-                                                value=input_filters["kernel"],
-                                                optionHeight=150,
-                                                placeholder="ALL",
-                                                style={
-                                                    "width": "600px",
-                                                    # TODO: Change these widths to
-                                                    # % rather than fixed value
-                                                },
-                                            ),
-                                        ]
-                                    )
-                                ],
-                            ),
-                            html.Div(
-                                className="nav-right",
-                                children=[
-                                    html.Li(
-                                        children=[
-                                            # Report bug button
-                                            html.A(
-                                                href="https://github.com/ROCm/rocm-systems/issues",
-                                                children=[
-                                                    html.Button(
-                                                        className="report",
-                                                        children=["Report Bug"],
-                                                    )
-                                                ],
-                                            )
-                                        ]
-                                    )
-                                ],
-                            ),
-                        ],
-                    )
-                ],
-            ),
-            html.Div(
-                className="row banner",
-                children=[
-                    html.H3(
-                        children=["Placeholder. Guided Analysis coming soon..."],
-                        style={"color": "white"},
-                    ),
-                ],
-            ),
-            html.P(
-                className="scrolldown",
-                children=[
-                    html.A(
-                        className="smoothscroll",
-                        href="#roofline",
-                        children=[html.I(className="icon-down-circle")],
-                    )
-                ],
-            ),
-        ],
+    norm_filt = pn.widgets.Select(
+        name="Normalization",
+        options=AVAIL_NORMALIZATIONS,
+        value=input_filters["normalization"],
+        width=150,
     )
+    gcd_filt = pn.widgets.MultiChoice(
+        name="GCD",
+        options=list_unique(gpu_ids, True),
+        value=input_filters["gpu"] or [],
+        placeholder="ALL",
+        width=120,
+    )
+    disp_filt = pn.widgets.MultiChoice(
+        name="Dispatch Filter",
+        options=dispatch_ids,
+        value=input_filters["dispatch"] or [],
+        placeholder="ALL",
+        width=180,
+    )
+    top_n_filt = pn.widgets.Select(
+        name="Top N",
+        options=[1, 5, 10, 15, 20, 50, 100],
+        value=input_filters["top_n"],
+        width=80,
+    )
+    kernel_filt = pn.widgets.MultiChoice(
+        name="Kernels",
+        options=list_unique(kernel_names, False),
+        value=input_filters["kernel"] or [],
+        placeholder="ALL",
+        width=400,
+    )
+
+    # Section anchors for nav (same ids as before for deep links)
+    section_links = [
+        ("Roofline", "roofline"),
+        ("Top Stats", "top_stats"),
+        ("System Info", "system_info"),
+        ("System Speed-of-Light", "system_speed-of-light"),
+        ("Command Processor", "command_processor_cpccpf"),
+        ("Workgroup Manager (SPI)", "workgroup_manager_spi"),
+        ("Wavefront", "wavefront"),
+        ("Instruction Mix", "compute_units_-_instruction_mix"),
+        ("Compute Pipeline", "compute_units_-_compute_pipeline"),
+        ("LDS", "local_data_share_lds"),
+        ("Instruction Cache", "instruction_cache"),
+        ("Scalar L1", "scalar_l1_data_cache"),
+        ("TA/TD", "address_processing_unit_and_data_return_path_tatd"),
+        ("Vector L1", "vector_l1_data_cache"),
+        ("L2 Cache", "l2_cache"),
+        ("L2 per channel", "l2_cache_per_channel"),
+    ]
+    menu = pn.widgets.Select(
+        name="Menu",
+        options=[""] + [label for label, _ in section_links],
+        value="",
+        width=180,
+    )
+
+    widget_dict = {
+        "norm_filt": norm_filt,
+        "gcd_filt": gcd_filt,
+        "disp_filt": disp_filt,
+        "top_n_filt": top_n_filt,
+        "kernel_filt": kernel_filt,
+        "menu": menu,
+        "section_links": dict(section_links),
+    }
+
+    filter_row = pn.Row(
+        menu,
+        pn.Spacer(width=20),
+        norm_filt,
+        gcd_filt,
+        disp_filt,
+        top_n_filt,
+        kernel_filt,
+        pn.layout.HSpacer(),
+        pn.pane.HTML(
+            '<a href="https://github.com/ROCm/rocm-systems/issues" target="_blank">'
+            '<button class="pn-btn">Report Bug</button></a>'
+        ),
+        sizing_mode="stretch_width",
+        styles={"background": "#1e1e1e", "padding": "8px", "border-radius": "4px"},
+    )
+
+    banner = pn.pane.Markdown(
+        "Placeholder. Guided Analysis coming soon...",
+        styles={"color": "white", "padding": "8px"},
+    )
+
+    header_col = pn.Column(
+        filter_row,
+        banner,
+        sizing_mode="stretch_width",
+        styles={"background": "rgb(30, 30, 30)", "padding": "12px"},
+    )
+    return header_col, widget_dict

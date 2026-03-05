@@ -26,13 +26,12 @@ import argparse
 import textwrap
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import plotext as plt
 import plotly.graph_objects as go
-from dash import dcc, html
 from plotly.subplots import make_subplots
 
 from utils import schema
@@ -204,15 +203,30 @@ class Roofline:
             return "Unknown"
 
         bandwidth = cache_data[2]
+        if bandwidth is None or (isinstance(bandwidth, float) and bandwidth != bandwidth):
+            return "Unknown"
 
-        # Get min peak performance
+        # Get min peak performance (skip None/NaN)
+        def _safe_peak(data: Any) -> Optional[float]:
+            if not data or not isinstance(data, (list, tuple)) or len(data) < 3:
+                return None
+            v = data[2]
+            if v is None or (isinstance(v, float) and v != v):
+                return None
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
         min_peak = float("inf")
-        if "valu" in ceiling_data and ceiling_data["valu"]:
-            min_peak = min(min_peak, ceiling_data["valu"][2])
-        if "mfma" in ceiling_data and ceiling_data["mfma"]:
-            min_peak = min(min_peak, ceiling_data["mfma"][2])
+        for key in ("valu", "mfma"):
+            if key not in ceiling_data:
+                continue
+            p = _safe_peak(ceiling_data[key])
+            if p is not None:
+                min_peak = min(min_peak, p)
 
-        if min_peak == float("inf"):
+        if min_peak == float("inf") or min_peak <= 0 or bandwidth <= 0:
             return "Unknown"
 
         x_intersect = min_peak / bandwidth
@@ -225,7 +239,7 @@ class Roofline:
     @demarcate
     def empirical_roofline(
         self, ret_df: dict[str, pd.DataFrame]
-    ) -> Optional[html.Section]:
+    ) -> Optional[Tuple[Optional[go.Figure], Optional[go.Figure]]]:
         """
         Generate a set of empirical roofline plots given a directory containing
         required profiling and benchmarking data.
@@ -335,43 +349,8 @@ class Roofline:
 
             console_log("roofline", "Empirical Roofline HTML file saved!")
         else:
-            # Create HTML output for GUI mode.
-            ops_graph = (
-                html.Div(
-                    className="float-child",
-                    children=[
-                        html.H3(children="Empirical Roofline Analysis (Ops)"),
-                        dcc.Graph(figure=ops_figure),
-                    ],
-                )
-                if ops_figure
-                else None
-            )
-
-            flops_graph = (
-                html.Div(
-                    className="float-child",
-                    children=[
-                        html.H3(children="Empirical Roofline Analysis (Flops)"),
-                        dcc.Graph(figure=flops_figure),
-                    ],
-                )
-                if flops_figure
-                else None
-            )
-
-            return html.Section(
-                id="roofline",
-                children=[
-                    html.Div(
-                        className="float-container",
-                        children=[
-                            ops_graph,
-                            flops_graph,
-                        ],
-                    )
-                ],
-            )
+            # Return raw Plotly figures for Panel/HoloViews GUI embedding.
+            return (ops_figure, flops_figure)
 
     @demarcate
     def generate_plot(
