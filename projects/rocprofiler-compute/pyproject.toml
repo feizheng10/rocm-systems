@@ -120,4 +120,8 @@ markers = [
     "time_unit_conversion",
     "time_unit_edge_cases",
     "time_unit_integration",
+    "jupyter",
+    "panel_gui",
+    "e2e",
+    "inprocess",
 ]

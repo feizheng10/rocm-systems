@@ -61,6 +61,10 @@ def pytest_configure(config):
         "markers",
         "inprocess: in-process Panel/Bokeh tests (no browser)",
     )
+    config.addinivalue_line(
+        "markers",
+        "jupyter: tests for Jupyter / Jupyter Book API (rocprof_compute_jupyter)",
+    )
 
 
 def pytest_addoption(parser):

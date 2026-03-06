@@ -1,0 +1,25 @@
+# Jupyter Book configuration for rocprofiler-compute
+# Build with: jupyter book build docs/jupyter_book/
+title: ROCProfiler-Compute Jupyter Book
+author: AMD
+logo: ""
+execute:
+  execute_notebooks: auto
+  timeout: 120
+  allow_errors: false
+parse:
+  myst_enable_extensions:
+    - colon_fence
+    - deflist
+    - linkify
+  myst_url_schemes: [mailto, http, https]
+latex:
+  latex_engine: pdflatex
+sphinx:
+  extra_extensions: []
+  config:
+    html_theme: sphinx_book_theme
+    html_title: ROCProfiler-Compute
+    html_logo: ""
+    html_use_index: true
+    html_domain_indices: true
