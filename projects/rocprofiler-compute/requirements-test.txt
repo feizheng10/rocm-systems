@@ -2,3 +2,6 @@ pytest==8.0.2
 pytest-cov==5.0.0
 pytest-xdist==3.5.0
 scipy==1.11.4
+# Panel GUI E2E tests (tests/test_panel_gui_e2e.py); then: playwright install chromium
+playwright>=1.40.0
+pytest-playwright>=0.4.0

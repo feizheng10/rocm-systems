@@ -48,6 +48,21 @@ except Exception:
     ).load_module()
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "panel_gui: tests for Panel GUI (demo and analysis web UI)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "e2e: end-to-end tests using Playwright (require: pip install playwright && playwright install chromium)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "inprocess: in-process Panel/Bokeh tests (no browser)",
+    )
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--call-binary",

@@ -401,29 +401,34 @@ class webui_analysis(OmniAnalyze_Base):
             self.build_layout(input_filters, self._arch_configs[self.arch])
         port = random.randint(1024, 49151) if args.random_port else args.gui
         if hasattr(self, "_panel_layout") and self._panel_layout is not None:
-            # Serve via a function so the layout is attached to each session's document
-            def get_app():
-                return self._panel_layout
+            layout = self._panel_layout
 
-            # Open via 127.0.0.1 or localhost; using 0.0.0.0 in the browser breaks WebSocket
+            def get_app():
+                # Same pattern as panel_demo_simple.py: return layout (or fallback on error)
+                try:
+                    return layout
+                except Exception as e:
+                    return pn.Column(
+                        pn.pane.Markdown(f"# {PROJECT_NAME}"),
+                        pn.pane.Markdown(f"Error loading app: {e!r}", styles={"color": "red"}),
+                        sizing_mode="stretch_width",
+                    )
+
+            # Same pattern as working panel serve CLI: 0.0.0.0 + allow_websocket_origin=["*"] + prefix
+            prefix = "app"
+            apps = {prefix: get_app}
             console_log(
                 "analysis",
-                f"GUI server: open http://127.0.0.1:{port} or http://localhost:{port} "
-                "(do not use http://0.0.0.0 or the WebSocket connection will fail)",
+                f"GUI server: open http://127.0.0.1:{port}/{prefix} or http://localhost:{port}/{prefix} "
+                "(use 127.0.0.1 or localhost in browser, not 0.0.0.0)",
             )
             pn.serve(
-                get_app,
+                apps,
                 port=port,
                 address="0.0.0.0",
                 title=PROJECT_NAME,
                 show=False,
-                # Explicitly allow WebSocket from browser (Bokeh 3.8+ origin checks)
-                websocket_origin=[
-                    f"127.0.0.1:{port}",
-                    f"localhost:{port}",
-                    "127.0.0.1",
-                    "localhost",
-                ],
+                allow_websocket_origin=["*"],
             )
 
 
