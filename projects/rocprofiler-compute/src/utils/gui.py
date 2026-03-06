@@ -15,6 +15,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ##############################################################################
 
+import html as html_module
 from typing import Any
 
 import pandas as pd
@@ -25,6 +26,13 @@ import panel as pn
 from utils.logger import console_error
 
 pd.set_option("mode.chained_assignment", None)
+
+
+def _html_escape(s: Any) -> str:
+    """Escape for HTML attribute (e.g. title)."""
+    if s is None or (isinstance(s, float) and pd.isna(s)):
+        return ""
+    return html_module.escape(str(s))
 
 # HoloViews / Bokeh dark theme for consistency with app
 BAR_OPTS = dict(
@@ -217,18 +225,47 @@ def build_table_chart(
     comparable_columns: list[str],
     decimal: int,
 ) -> list[pn.widgets.Tabulator]:
-    """Build Panel Tabulator table(s) from dataframe."""
+    """Build Panel Tabulator table(s) from dataframe.
+    If original_df has a 'Description' column (metrics_description), it is included
+    in the data but hidden; row hover shows it as a tooltip.
+    """
     formatted = display_df.copy()
     for col in formatted.columns:
         col_lower = str(col).lower()
         if col_lower in {"pct", "pop", "percentage"} or col in comparable_columns:
             formatted[col] = pd.to_numeric(formatted[col], errors="coerce")
-    tbl = pn.widgets.Tabulator(
-        formatted,
+
+    # Include Description for row hover tooltip; do not show as a column
+    has_description = "Description" in original_df.columns
+    if has_description:
+        formatted["Description"] = original_df["Description"].values
+
+    tbl_kw: dict[str, Any] = dict(
+        value=formatted,
         theme="midnight",
         layout="fit_data",
         sizing_mode="stretch_width",
         show_index=False,
         page_size=20,
     )
+    if has_description:
+        tbl_kw["hidden_columns"] = ["Description"]
+        # Build first-column HTML in Python (JSON can't send formatter functions).
+        # Use Tabulator's built-in "html" formatter so the cell renders as HTML and title= shows on hover.
+        first_col = formatted.columns[0]
+        desc_series = formatted["Description"]
+        first_series = formatted[first_col]
+        formatted[first_col] = [
+            f'<span title="{_html_escape(d)}">{_html_escape(v)}</span>'
+            for d, v in zip(desc_series, first_series)
+        ]
+        tbl_kw["configuration"] = {
+            "columns": [
+                {"title": str(col), "field": str(col), "formatter": "html"}
+                if col == first_col
+                else {"title": str(col), "field": str(col)}
+                for col in formatted.columns
+            ]
+        }
+    tbl = pn.widgets.Tabulator(**tbl_kw)
     return [tbl]

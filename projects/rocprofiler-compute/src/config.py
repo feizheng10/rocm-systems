@@ -29,7 +29,8 @@ from pathlib import Path
 rocprof_compute_home = Path(__file__).resolve().parent
 PROJECT_NAME = "rocprofiler-compute"
 
-HIDDEN_COLUMNS = ["coll_level"]
+# Description column is shown only on row hover (tooltip), not as a table column
+HIDDEN_COLUMNS = ["coll_level", "Description"]
 HIDDEN_COLUMNS_CLI = ["Description", "coll_level"]
 HIDDEN_COLUMNS_TUI = ["coll_level"]
 HIDDEN_SECTIONS = [1900, 2000]
